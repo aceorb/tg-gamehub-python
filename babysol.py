@@ -151,7 +151,7 @@ def summarize_news(news):
 
     articles = [article['title'] + " " + article['description'] for article in news['articles'][:5]]
     news_summary = " ".join(articles)
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -159,7 +159,7 @@ def summarize_news(news):
         ],
         max_tokens=150
     )
-    return response.choices[0].message['content'].strip()
+    return response.choices[0].message.content.strip()
 
 def handle_price_alert(query, context):
     keyboard = [
@@ -233,9 +233,12 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         )
     elif context.user_data.get('awaiting_portfolio_add'):
         contract_address = update.message.text
-        add_to_portfolio(user_id, contract_address)
-        context.user_data['awaiting_portfolio_add'] = False
-        update.message.reply_text(f"Added {contract_address} to your portfolio.")
+        if len(contract_address) <= 42:
+            add_to_portfolio(user_id, contract_address)
+            context.user_data['awaiting_portfolio_add'] = False
+            update.message.reply_text(f"Added {contract_address} to your portfolio.")
+        else:
+            update.message.reply_text(f"Contract address '{contract_address}' is too long. Must be at most 42 characters.")
 
     elif context.user_data.get('awaiting_portfolio_remove'):
         contract_address = update.message.text
@@ -274,7 +277,7 @@ def get_ai_prediction(contract_address):
         total_volume = market_data.get('total_volume', {}).get('usd', 'N/A')
 
         coin_info = f"Current Price: ${current_price}\nMarket Cap: ${market_cap}\nTotal Volume: ${total_volume}"
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
@@ -282,7 +285,7 @@ def get_ai_prediction(contract_address):
             ],
             max_tokens=150
         )
-        return response.choices[0].message['content'].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         logging.error(f"Error fetching data: {str(e)}")
         return f"Error fetching data: {str(e)}"
