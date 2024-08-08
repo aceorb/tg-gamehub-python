@@ -182,26 +182,27 @@ def get_crypto_tips():
 def handle_ai_prediction(query, context):
     user_id = query.from_user.id
     user_predictions = get_user_predictions(user_id)
-    max_predictions = 40 if user_id == ADMIN_USER_ID else 10
-    remaining_predictions = max_predictions - user_predictions['daily_predictions']
-    if user_predictions['daily_predictions'] >= max_predictions:
+    if user_predictions is not None:
+        max_predictions = 40 if user_id == ADMIN_USER_ID else 10
+        remaining_predictions = max_predictions - user_predictions['daily_predictions']
+        if user_predictions['daily_predictions'] >= max_predictions:
+            keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_text(text=f"You've reached your daily limit of {max_predictions} AI predictions. Please check in tomorrow for more predictions.", reply_markup=reply_markup)
+            return
+
         keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text(text=f"You've reached your daily limit of {max_predictions} AI predictions. Please check in tomorrow for more predictions.", reply_markup=reply_markup)
-        return
-
-    keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.edit_message_text(
-        text=(
-            "🔮 AI Prediction\n\n"
-            "Provide a contract address of a cryptocurrency to get an AI-based prediction of its future performance.\n"
-            "Example: `0x514910771af9ca656af840dff83e8264ecf986ca`\n"
-            "Note: This prediction is not financial advice. Please do your own research before making any investment decisions.\n\n"
-            f"Remaining predictions for today: {remaining_predictions}"
-        ),
-        reply_markup=reply_markup
-    )
+        query.edit_message_text(
+            text=(
+                "🔮 AI Prediction\n\n"
+                "Provide a contract address of a cryptocurrency to get an AI-based prediction of its future performance.\n"
+                "Example: `0x514910771af9ca656af840dff83e8264ecf986ca`\n"
+                "Note: This prediction is not financial advice. Please do your own research before making any investment decisions.\n\n"
+                f"Remaining predictions for today: {remaining_predictions}"
+            ),
+            reply_markup=reply_markup
+        )
     context.user_data['awaiting_contract_address'] = True
 
 def handle_message(update: Update, context: CallbackContext) -> None:
@@ -276,7 +277,10 @@ def get_ai_prediction(contract_address):
         market_cap = market_data.get('market_cap', {}).get('usd', 'N/A')
         total_volume = market_data.get('total_volume', {}).get('usd', 'N/A')
 
-        coin_info = f"Current Price: ${current_price}\nMarket Cap: ${market_cap}\nTotal Volume: ${total_volume}"
+        price_change_percentage_24h = market_data.get('price_change_percentage_24h', 'N/A')
+        market_cap_change_percentage_24h = market_data.get('market_cap_change_percentage_24h', 'N/A')
+
+        coin_info = f"Current Price: ${current_price}\nMarket Cap: ${market_cap}\nTotal Volume: ${total_volume}\nPrice Change Percentage 24H: {price_change_percentage_24h}\nMarket Cap Change Percentage 24H: {market_cap_change_percentage_24h}\n"
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
