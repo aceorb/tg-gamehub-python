@@ -5,7 +5,9 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 from telegram.error import NetworkError, RetryAfter, Conflict
-from database import insert_user, update_checkin_date, insert_price_alert, get_price_alerts, deactivate_price_alert, get_user_predictions, update_user_predictions, reset_user_predictions, add_to_portfolio, remove_from_portfolio, get_user_portfolio, get_user_checkin_date, set_user_predictions
+from database import insert_user, update_checkin_date, insert_price_alert, get_price_alerts, deactivate_price_alert, \
+    get_user_predictions, update_user_predictions, reset_user_predictions, add_to_portfolio, remove_from_portfolio, \
+    get_user_portfolio, get_user_checkin_date, set_user_predictions
 from pycoingecko import CoinGeckoAPI
 import time
 from datetime import datetime, timedelta
@@ -29,6 +31,53 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Rate limiting dictionary
 user_request_times = {}
 
+# Keyboard Button Dict with Callback
+keyboard_dict = {
+    'home': [InlineKeyboardButton("🏠 Return to Home", callback_data='home')],
+    'daily_crypto_news': [InlineKeyboardButton("📰 Daily Crypto News 📰", callback_data='daily_crypto_news')],
+    'price_alert': [InlineKeyboardButton("📈 Price Alert 📉", callback_data='price_alert')],
+    'crypto_tips': [InlineKeyboardButton("💡 Crypto Tips 💡", callback_data='crypto_tips')],
+    'my_portfolio': [InlineKeyboardButton("💼 My Portfolio 💼", callback_data='my_portfolio')],
+    'admin_panel': [InlineKeyboardButton("🔧 Admin Panel 🔧", callback_data='admin_panel')],
+    'reset_daily_predictions': [
+        InlineKeyboardButton("Reset Daily Predictions", callback_data='reset_daily_predictions')],
+    'set_admin_predictions': [
+        InlineKeyboardButton("Set Admin Predictions to 40", callback_data='set_admin_predictions')],
+    'add_to_portfolio': [InlineKeyboardButton("Add to Portfolio", callback_data='add_to_portfolio')],
+    'remove_from_portfolio': [InlineKeyboardButton("Remove from Portfolio", callback_data='remove_from_portfolio')],
+    'add_price_alert': [InlineKeyboardButton("Add Price Alert", callback_data='add_price_alert')],
+    'remove_price_alert': [InlineKeyboardButton("Remove Price Alert", callback_data='remove_price_alert')],
+}
+
+
+def generate_main_menu(user_id):
+    keyboard = [
+        generate_keyboard_button('daily_crypto_news'),
+        generate_keyboard_button('price_alert'),
+        generate_keyboard_button('crypto_tips'),
+        generate_keyboard_button('my_portfolio'),
+    ]
+    if user_id == ADMIN_USER_ID:
+        keyboard.append(generate_keyboard_button('admin_panel'))
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    return (
+        '🎉 Welcome to the only one Crypto Bot! 🎉\nStay updated with daily crypto news, set price alerts. Choose an '
+        'option below:',
+        reply_markup
+    )
+
+
+def generate_return_home_reply_markup():
+    keyboard = [generate_keyboard_button('home')]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    return reply_markup
+
+
+def generate_keyboard_button(keyboard_type):
+    return keyboard_dict.get(keyboard_type, None)
+
+
 def rate_limited(user_id):
     now = time.time()
     if user_id in user_request_times:
@@ -38,26 +87,13 @@ def rate_limited(user_id):
     user_request_times[user_id] = now
     return False
 
+
 # Main menu
 def start(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
-    keyboard = [
-        [InlineKeyboardButton("✨ Daily Check-in ✨", callback_data='daily_checkin')],
-        [InlineKeyboardButton("📰 Daily Crypto News 📰", callback_data='daily_crypto_news')],
-        [InlineKeyboardButton("📈 Price Alert 📉", callback_data='price_alert')],
-        [InlineKeyboardButton("💡 Crypto Tips 💡", callback_data='crypto_tips')],
-        [InlineKeyboardButton("🔮 AI Prediction 🔮", callback_data='ai_prediction')],
-        [InlineKeyboardButton("💼 My Portfolio 💼", callback_data='my_portfolio')]
-    ]
-    
-    if user_id == ADMIN_USER_ID:
-        keyboard.append([InlineKeyboardButton("🔧 Admin Panel 🔧", callback_data='admin_panel')])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
-        '🎉 Welcome to the Crypto Prediction Bot! 🎉\nStay updated with daily crypto news, set price alerts, and get AI predictions. Choose an option below:',
-        reply_markup=reply_markup
-    )
+    (message, reply_markup) = generate_main_menu(user_id)
+    update.message.reply_text(message, reply_markup=reply_markup)
+
 
 # Handlers for buttons
 def button_handler(update: Update, context: CallbackContext) -> None:
@@ -81,7 +117,9 @@ def button_handler(update: Update, context: CallbackContext) -> None:
     elif query.data == 'home':
         show_main_menu(query, context)
     elif query.data == 'add_price_alert':
-        query.edit_message_text(text="Enter the contract address and the price you want to set an alert for, separated by a space (e.g., '0x514910771af9ca656af840dff83e8264ecf986ca 500'):")
+        query.edit_message_text(
+            text="Enter the contract address and the price you want to set an alert for, separated by a space (e.g., "
+                 "'0x514910771af9ca656af840dff83e8264ecf986ca 500'):")
         context.user_data['awaiting_price_alert'] = True
     elif query.data == 'remove_price_alert':
         query.edit_message_text(text="Enter the alert ID you want to remove:")
@@ -99,44 +137,35 @@ def button_handler(update: Update, context: CallbackContext) -> None:
         set_user_predictions(ADMIN_USER_ID, 40)
         query.edit_message_text(text="Admin daily predictions limit has been set to 40.")
 
+
 def show_main_menu(query, context):
     user_id = query.from_user.id
-    keyboard = [
-        [InlineKeyboardButton("✨ Daily Check-in ✨", callback_data='daily_checkin')],
-        [InlineKeyboardButton("📰 Daily Crypto News 📰", callback_data='daily_crypto_news')],
-        [InlineKeyboardButton("📈 Price Alert 📉", callback_data='price_alert')],
-        [InlineKeyboardButton("💡 Crypto Tips 💡", callback_data='crypto_tips')],
-        [InlineKeyboardButton("🔮 AI Prediction 🔮", callback_data='ai_prediction')],
-        [InlineKeyboardButton("💼 My Portfolio 💼", callback_data='my_portfolio')]
-    ]
-    
-    if user_id == ADMIN_USER_ID:
-        keyboard.append([InlineKeyboardButton("🔧 Admin Panel 🔧", callback_data='admin_panel')])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.edit_message_text(
-        '🎉 Welcome to the Crypto Prediction Bot! 🎉\nStay updated with daily crypto news, set price alerts, and get AI predictions. Choose an option below:',
-        reply_markup=reply_markup
-    )
+    (message, reply_markup) = generate_main_menu(user_id)
+    query.edit_message_text(message, reply_markup=reply_markup)
+
 
 def handle_daily_checkin(query, context):
     user_id = query.from_user.id
     insert_user(user_id)
     user_checkin_date = get_user_checkin_date(user_id)
+    reply_markup_return_home = generate_return_home_reply_markup()
     if user_checkin_date and user_checkin_date['checkin_date'] == datetime.now().strftime('%Y-%m-%d'):
-        query.edit_message_text(text="Sorry, you have already checked in today. Please come back tomorrow.")
+        query.edit_message_text(
+            text="Sorry, you have already checked in today. Please come back tomorrow.",
+            reply_markup=reply_markup_return_home)
     else:
         update_checkin_date(user_id)
-        keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text(text="✅ You've checked in today! You earned 1 extra daily prediction.", reply_markup=reply_markup)
+        query.edit_message_text(
+            text="✅ You've checked in today! You earned 1 extra daily prediction.",
+            reply_markup=reply_markup_return_home)
+
 
 def handle_daily_crypto_news(query, context):
     news = fetch_crypto_news()
     summary = summarize_news(news)
-    keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.edit_message_text(text=summary, reply_markup=reply_markup)
+    reply_markup_return_home = generate_return_home_reply_markup()
+    query.edit_message_text(text=summary, reply_markup=reply_markup_return_home)
+
 
 def fetch_crypto_news():
     url = f'https://newsapi.org/v2/everything?q=cryptocurrency&apiKey={NEWSAPI_KEY}'
@@ -144,6 +173,7 @@ def fetch_crypto_news():
     if response.status_code == 200:
         return response.json()
     return {"status": "error"}
+
 
 def summarize_news(news):
     if "status" in news and news["status"] == "error":
@@ -161,23 +191,27 @@ def summarize_news(news):
     )
     return response.choices[0].message.content.strip()
 
+
 def handle_price_alert(query, context):
     keyboard = [
-        [InlineKeyboardButton("Add Price Alert", callback_data='add_price_alert')],
-        [InlineKeyboardButton("Remove Price Alert", callback_data='remove_price_alert')],
-        [InlineKeyboardButton("🏠 Return to Home", callback_data='home')]
+        generate_keyboard_button('add_price_alert'),
+        generate_keyboard_button('remove_price_alert'),
+        generate_keyboard_button('home'),
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(text="Manage your price alerts:", reply_markup=reply_markup)
 
+
 def handle_crypto_tips(query, context):
     tips = get_crypto_tips()
-    keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.edit_message_text(text=tips, reply_markup=reply_markup)
+    reply_markup_return_home = generate_return_home_reply_markup()
+    query.edit_message_text(text=tips, reply_markup=reply_markup_return_home)
+
 
 def get_crypto_tips():
-    return "Here are some crypto tips: ...\n1. Do your research.\n2. Diversify your portfolio.\n3. Use a secure wallet.\n4. Stay updated with news."
+    return ("Here are some crypto tips: ...\n1. Do your research.\n2. Diversify your portfolio.\n3. Use a secure "
+            "wallet.\n4. Stay updated with news.")
+
 
 def handle_ai_prediction(query, context):
     user_id = query.from_user.id
@@ -185,31 +219,35 @@ def handle_ai_prediction(query, context):
     if user_predictions is not None:
         max_predictions = 40 if user_id == ADMIN_USER_ID else 10
         remaining_predictions = max_predictions - user_predictions['daily_predictions']
-        if user_predictions['daily_predictions'] >= max_predictions:
-            keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            query.edit_message_text(text=f"You've reached your daily limit of {max_predictions} AI predictions. Please check in tomorrow for more predictions.", reply_markup=reply_markup)
-            return
+        reply_markup_return_home = generate_return_home_reply_markup()
 
-        keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text(
-            text=(
-                "🔮 AI Prediction\n\n"
-                "Provide a contract address of a cryptocurrency to get an AI-based prediction of its future performance.\n"
-                "Example: `0x514910771af9ca656af840dff83e8264ecf986ca`\n"
-                "Note: This prediction is not financial advice. Please do your own research before making any investment decisions.\n\n"
-                f"Remaining predictions for today: {remaining_predictions}"
-            ),
-            reply_markup=reply_markup
-        )
+        if user_predictions['daily_predictions'] >= max_predictions:
+            query.edit_message_text(
+                text=f"You've reached your daily limit of {max_predictions} AI predictions. Please check in tomorrow "
+                     f"for more predictions.",
+                reply_markup=reply_markup_return_home)
+            return
+        else:
+            query.edit_message_text(
+                text=(
+                    "🔮 AI Prediction\n\n"
+                    "Provide a contract address of a cryptocurrency to get an AI-based prediction of its future performance.\n"
+                    "Example: `0x514910771af9ca656af840dff83e8264ecf986ca`\n"
+                    "Note: This prediction is not financial advice. Please do your own research before making any investment decisions.\n\n"
+                    f"Remaining predictions for today: {remaining_predictions}"
+                ),
+                reply_markup=reply_markup_return_home
+            )
     context.user_data['awaiting_contract_address'] = True
+
 
 def handle_message(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
     if rate_limited(user_id):
         update.message.reply_text("Please wait a moment before making another request.")
         return
+
+    reply_markup_return_home = generate_return_home_reply_markup()
 
     if context.user_data.get('awaiting_contract_address'):
         contract_address = update.message.text
@@ -221,8 +259,6 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         update_user_predictions(user_id, user_predictions['daily_predictions'] + 1)
         remaining_predictions = max_predictions - (user_predictions['daily_predictions'] + 1)
 
-        keyboard = [[InlineKeyboardButton("🏠 Return to Home", callback_data='home')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(
             text=(
                 f"🔮 AI Prediction:\n{prediction}\n\n"
@@ -230,48 +266,64 @@ def handle_message(update: Update, context: CallbackContext) -> None:
                 "Please do your own research before making any investment decisions.\n\n"
                 f"Remaining predictions for today: {remaining_predictions}"
             ),
-            reply_markup=reply_markup
+            reply_markup=reply_markup_return_home
         )
     elif context.user_data.get('awaiting_portfolio_add'):
         contract_address = update.message.text
+        context.user_data['awaiting_portfolio_add'] = False
         if len(contract_address) <= 42:
             add_to_portfolio(user_id, contract_address)
-            context.user_data['awaiting_portfolio_add'] = False
-            update.message.reply_text(f"Added {contract_address} to your portfolio.")
+            update.message.reply_text(
+                f"Added {contract_address} to your portfolio.",
+                reply_markup=reply_markup_return_home)
         else:
-            update.message.reply_text(f"Contract address '{contract_address}' is too long. Must be at most 42 characters.")
+            update.message.reply_text(
+                f"Contract address '{contract_address}' is too long. Must be at most 42 characters.",
+                reply_markup=reply_markup_return_home)
 
     elif context.user_data.get('awaiting_portfolio_remove'):
         contract_address = update.message.text
         remove_from_portfolio(user_id, contract_address)
         context.user_data['awaiting_portfolio_remove'] = False
-        update.message.reply_text(f"Removed {contract_address} from your portfolio.")
+        update.message.reply_text(
+            f"Removed {contract_address} from your portfolio.",
+            reply_markup=reply_markup_return_home)
 
     elif context.user_data.get('awaiting_price_alert'):
+        context.user_data['awaiting_price_alert'] = False
         try:
             contract_address, alert_price = update.message.text.split()
             alert_price = float(alert_price)
             insert_price_alert(user_id, contract_address, alert_price)
-            update.message.reply_text(f"Price alert set for {contract_address} at ${alert_price}.")
+            update.message.reply_text(
+                f"Price alert set for {contract_address} at ${alert_price}.",
+                reply_markup=reply_markup_return_home)
         except ValueError:
-            update.message.reply_text("Invalid input. Please enter the contract address and the price separated by a space (e.g., '0x514910771af9ca656af840dff83e8264ecf986ca 500').")
-        context.user_data['awaiting_price_alert'] = False
+            update.message.reply_text(
+                "Invalid input. Please enter the contract address and the price separated by a space (e.g., "
+                "'0x514910771af9ca656af840dff83e8264ecf986ca 500').",
+                reply_markup=reply_markup_return_home)
 
     elif context.user_data.get('awaiting_remove_alert'):
+        context.user_data['awaiting_remove_alert'] = False
         try:
             alert_id = int(update.message.text)
             deactivate_price_alert(alert_id)
-            update.message.reply_text(f"Price alert with ID {alert_id} removed.")
+            update.message.reply_text(
+                f"Price alert with ID {alert_id} removed.",
+                reply_markup=reply_markup_return_home)
         except ValueError:
-            update.message.reply_text("Invalid input. Please enter a valid alert ID.")
-        context.user_data['awaiting_remove_alert'] = False
+            update.message.reply_text(
+                "Invalid input. Please enter a valid alert ID.",
+                reply_markup=reply_markup_return_home)
+
 
 def get_ai_prediction(contract_address):
     try:
         coin_data = cg.get_coin_info_from_contract_address_by_id(id='ethereum', contract_address=contract_address)
         if 'error' in coin_data:
             return "Coin not found. Please check the contract address and try again."
-        
+
         market_data = coin_data.get('market_data', {})
         current_price = market_data.get('current_price', {}).get('usd', 'N/A')
         market_cap = market_data.get('market_cap', {}).get('usd', 'N/A')
@@ -285,7 +337,8 @@ def get_ai_prediction(contract_address):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": f"Based on the following data, predict the future performance of the cryptocurrency:\n{coin_info}"}
+                {"role": "user",
+                 "content": f"Based on the following data, predict the future performance of the cryptocurrency:\n{coin_info}"}
             ],
             max_tokens=150
         )
@@ -293,6 +346,7 @@ def get_ai_prediction(contract_address):
     except Exception as e:
         logging.error(f"Error fetching data: {str(e)}")
         return f"Error fetching data: {str(e)}"
+
 
 def handle_my_portfolio(query, context):
     user_id = query.from_user.id
@@ -304,7 +358,8 @@ def handle_my_portfolio(query, context):
         total_value = 0
         for coin in portfolio:
             try:
-                coin_data = cg.get_coin_info_from_contract_address_by_id(id='ethereum', contract_address=coin['contract_address'])
+                coin_data = cg.get_coin_info_from_contract_address_by_id(id='ethereum',
+                                                                         contract_address=coin['contract_address'])
                 if 'error' in coin_data:
                     portfolio_text += f"- {coin['contract_address']}: Coin not found\n"
                     continue
@@ -335,21 +390,23 @@ def handle_my_portfolio(query, context):
                 portfolio_text += f"- {coin['contract_address']}: Error fetching historical data\n"
 
     keyboard = [
-        [InlineKeyboardButton("Add to Portfolio", callback_data='add_to_portfolio')],
-        [InlineKeyboardButton("Remove from Portfolio", callback_data='remove_from_portfolio')],
-        [InlineKeyboardButton("🏠 Return to Home", callback_data='home')]
+        generate_keyboard_button('add_to_portfolio'),
+        generate_keyboard_button('remove_from_portfolio'),
+        generate_keyboard_button('home'),
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(text=portfolio_text, reply_markup=reply_markup)
 
+
 def handle_admin_panel(query, context):
     keyboard = [
-        [InlineKeyboardButton("Reset Daily Predictions", callback_data='reset_daily_predictions')],
-        [InlineKeyboardButton("Set Admin Predictions to 40", callback_data='set_admin_predictions')],
-        [InlineKeyboardButton("🏠 Return to Home", callback_data='home')]
+        generate_keyboard_button('reset_daily_predictions'),
+        generate_keyboard_button('set_admin_predictions'),
+        generate_keyboard_button('home'),
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.edit_message_text(text="🔧 Admin Panel 🔧", reply_markup=reply_markup)
+
 
 def reset_predictions_daily():
     while True:
@@ -359,8 +416,11 @@ def reset_predictions_daily():
         time.sleep(time_until_reset)
         reset_user_predictions()
 
-import threading
+
+
+
 threading.Thread(target=reset_predictions_daily, daemon=True).start()
+
 
 def main() -> None:
     updater = Updater(TELEGRAM_API_TOKEN)
@@ -389,6 +449,7 @@ def main() -> None:
                 time.sleep(5)
 
     run()
+
 
 if __name__ == '__main__':
     main()
