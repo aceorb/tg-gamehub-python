@@ -7,7 +7,7 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageH
 from telegram.error import NetworkError, RetryAfter, Conflict
 from database import insert_user, update_checkin_date, insert_price_alert, get_price_alerts, deactivate_price_alert, \
     get_user_predictions, update_user_predictions, reset_user_predictions, add_to_portfolio, remove_from_portfolio, \
-    get_user_portfolio, get_user_checkin_date, set_user_predictions
+    get_user_portfolio, get_user_checkin_date, set_user_predictions, set_user_suggestion
 from pycoingecko import CoinGeckoAPI
 import time
 from datetime import datetime, timedelta
@@ -47,6 +47,7 @@ keyboard_dict = {
     'remove_from_portfolio': [InlineKeyboardButton("Remove from Portfolio", callback_data='remove_from_portfolio')],
     'add_price_alert': [InlineKeyboardButton("Add Price Alert", callback_data='add_price_alert')],
     'remove_price_alert': [InlineKeyboardButton("Remove Price Alert", callback_data='remove_price_alert')],
+    'feature_request': [InlineKeyboardButton("💭 Feature Request 💭", callback_data='feature_request')],
 }
 
 
@@ -56,6 +57,7 @@ def generate_main_menu(user_id):
         generate_keyboard_button('price_alert'),
         generate_keyboard_button('crypto_tips'),
         generate_keyboard_button('my_portfolio'),
+        generate_keyboard_button('feature_request'),
     ]
     if user_id == ADMIN_USER_ID:
         keyboard.append(generate_keyboard_button('admin_panel'))
@@ -136,7 +138,9 @@ def button_handler(update: Update, context: CallbackContext) -> None:
     elif query.data == 'set_admin_predictions':
         set_user_predictions(ADMIN_USER_ID, 40)
         query.edit_message_text(text="Admin daily predictions limit has been set to 40.")
-
+    elif query.data == 'feature_request':
+        query.edit_message_text(text="Please suggest any awesome feature for the improvement of our bot.:")
+        context.user_data['awaiting_suggest_add'] = True
 
 def show_main_menu(query, context):
     user_id = query.from_user.id
@@ -316,6 +320,13 @@ def handle_message(update: Update, context: CallbackContext) -> None:
             update.message.reply_text(
                 "Invalid input. Please enter a valid alert ID.",
                 reply_markup=reply_markup_return_home)
+    elif context.user_data.get('awaiting_suggest_add'):
+        suggestion = update.message.text
+        context.user_data['awaiting_suggest_add'] = False
+        set_user_suggestion(user_id, suggestion)
+        update.message.reply_text(
+            f"Added your suggestion successfully.",
+            reply_markup=reply_markup_return_home)
 
 
 def get_ai_prediction(contract_address):
@@ -415,8 +426,6 @@ def reset_predictions_daily():
         time_until_reset = (next_reset - now).total_seconds()
         time.sleep(time_until_reset)
         reset_user_predictions()
-
-
 
 
 threading.Thread(target=reset_predictions_daily, daemon=True).start()

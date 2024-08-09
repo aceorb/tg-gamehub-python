@@ -4,9 +4,11 @@ from psycopg2.extras import RealDictCursor
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
+
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, sslmode='require')
     return conn
+
 
 def insert_user(telegram_id):
     conn = get_db_connection()
@@ -21,6 +23,7 @@ def insert_user(telegram_id):
     cur.close()
     conn.close()
 
+
 def update_checkin_date(telegram_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -33,6 +36,7 @@ def update_checkin_date(telegram_id):
     cur.close()
     conn.close()
 
+
 def get_user_checkin_date(telegram_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -41,6 +45,7 @@ def get_user_checkin_date(telegram_id):
     cur.close()
     conn.close()
     return result
+
 
 def insert_price_alert(telegram_id, contract_address, alert_price):
     conn = get_db_connection()
@@ -53,6 +58,7 @@ def insert_price_alert(telegram_id, contract_address, alert_price):
     cur.close()
     conn.close()
 
+
 def get_price_alerts():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -62,6 +68,7 @@ def get_price_alerts():
     conn.close()
     return result
 
+
 def deactivate_price_alert(alert_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -69,6 +76,7 @@ def deactivate_price_alert(alert_id):
     conn.commit()
     cur.close()
     conn.close()
+
 
 def get_user_predictions(telegram_id):
     conn = get_db_connection()
@@ -83,6 +91,7 @@ def get_user_predictions(telegram_id):
     conn.close()
     return result
 
+
 def update_user_predictions(telegram_id, predictions):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -95,6 +104,7 @@ def update_user_predictions(telegram_id, predictions):
     cur.close()
     conn.close()
 
+
 def add_to_portfolio(telegram_id, contract_address):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -105,6 +115,7 @@ def add_to_portfolio(telegram_id, contract_address):
     conn.commit()
     cur.close()
     conn.close()
+
 
 def remove_from_portfolio(telegram_id, contract_address):
     conn = get_db_connection()
@@ -117,6 +128,7 @@ def remove_from_portfolio(telegram_id, contract_address):
     cur.close()
     conn.close()
 
+
 def get_user_portfolio(telegram_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -126,6 +138,7 @@ def get_user_portfolio(telegram_id):
     conn.close()
     return result
 
+
 def reset_user_predictions():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -134,10 +147,20 @@ def reset_user_predictions():
     cur.close()
     conn.close()
 
+
 def set_user_predictions(telegram_id, predictions):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("UPDATE users SET daily_predictions = %s WHERE telegram_id = %s;", (predictions, telegram_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def set_user_suggestion(telegram_id, suggestion):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO suggestions (telegram_id, text, date)  VALUES (%s, %s, CURRENT_DATE);", (telegram_id, suggestion))
     conn.commit()
     cur.close()
     conn.close()
