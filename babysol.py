@@ -80,6 +80,10 @@ def generate_keyboard_button(keyboard_type):
     return keyboard_dict.get(keyboard_type, None)
 
 
+def generate_keyboard_button_for_portfolio_remove(contract):
+    return [InlineKeyboardButton(contract, callback_data='remove_contract_'+contract)]
+
+
 def rate_limited(user_id):
     now = time.time()
     if user_id in user_request_times:
@@ -118,6 +122,11 @@ def button_handler(update: Update, context: CallbackContext) -> None:
         handle_admin_panel(query, context)
     elif query.data == 'home':
         show_main_menu(query, context)
+    elif query.data == 'remove_from_portfolio':
+        handle_remove_portfolio(query, context)
+    elif query.data.startswith("remove_contract_"):
+        contract = query.data.split('_')[-1]
+        handle_remove_contract(query, contract)
     elif query.data == 'add_price_alert':
         query.edit_message_text(
             text="Enter the contract address and the price you want to set an alert for, separated by a space (e.g., "
@@ -129,9 +138,6 @@ def button_handler(update: Update, context: CallbackContext) -> None:
     elif query.data == 'add_to_portfolio':
         query.edit_message_text(text="Enter the contract address to add to your portfolio:")
         context.user_data['awaiting_portfolio_add'] = True
-    elif query.data == 'remove_from_portfolio':
-        query.edit_message_text(text="Enter the contract address to remove from your portfolio:")
-        context.user_data['awaiting_portfolio_remove'] = True
     elif query.data == 'reset_daily_predictions':
         reset_user_predictions()
         query.edit_message_text(text="Daily predictions have been reset.")
@@ -284,15 +290,6 @@ def handle_message(update: Update, context: CallbackContext) -> None:
             update.message.reply_text(
                 f"Contract address '{contract_address}' is too long. Must be at most 42 characters.",
                 reply_markup=reply_markup_return_home)
-
-    elif context.user_data.get('awaiting_portfolio_remove'):
-        contract_address = update.message.text
-        remove_from_portfolio(user_id, contract_address)
-        context.user_data['awaiting_portfolio_remove'] = False
-        update.message.reply_text(
-            f"Removed {contract_address} from your portfolio.",
-            reply_markup=reply_markup_return_home)
-
     elif context.user_data.get('awaiting_price_alert'):
         context.user_data['awaiting_price_alert'] = False
         try:
@@ -426,6 +423,37 @@ def reset_predictions_daily():
         time_until_reset = (next_reset - now).total_seconds()
         time.sleep(time_until_reset)
         reset_user_predictions()
+
+
+def handle_remove_portfolio(query, context):
+    user_id = query.from_user.id
+    portfolio = get_user_portfolio(user_id)
+    if not portfolio:
+        portfolio_text = "Your portfolio is empty. Add some tokens to track."
+        keyboard = [
+            generate_keyboard_button('home'),
+        ]
+    else:
+        portfolio_text = "Choose the contract address to remove from your portfolio:"
+        keyboard = []
+        for coin in portfolio:
+            contract = coin['contract_address']
+            keyboard.append(generate_keyboard_button_for_portfolio_remove(contract))
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.edit_message_text(text=portfolio_text, reply_markup=reply_markup)
+
+
+def handle_remove_contract(query, contract):
+    user_id = query.from_user.id
+    remove_from_portfolio(user_id, contract)
+    keyboard = [
+        generate_keyboard_button('remove_from_portfolio'),
+        generate_keyboard_button('home'),
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.edit_message_text(
+        f"Removed {contract} from your portfolio.",
+        reply_markup=reply_markup)
 
 
 threading.Thread(target=reset_predictions_daily, daemon=True).start()
