@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Load secrets from Railway environment variables
 load_dotenv()
-TELEGRAM_API_TOKEN = os.environ('TELEGRAM_API_TOKEN')
+TELEGRAM_API_TOKEN = os.environ['TELEGRAM_API_TOKEN']
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -132,7 +132,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
-    print(f"TOKEN:{TELEGRAM_API_TOKEN}")
+    # print(f"TOKEN:{TELEGRAM_API_TOKEN}")
     application = Application.builder().token(TELEGRAM_API_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
