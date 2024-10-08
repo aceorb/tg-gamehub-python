@@ -1,1 +1,1 @@
-web: python babysol.py
+web: python main.py
