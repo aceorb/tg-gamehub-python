@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Load secrets from Railway environment variables
 load_dotenv()
-TELEGRAM_API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
+TELEGRAM_API_TOKEN = os.environ('TELEGRAM_API_TOKEN')
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
