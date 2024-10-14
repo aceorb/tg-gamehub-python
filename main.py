@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 # Load secrets from Railway environment variables
 load_dotenv()
 TELEGRAM_API_TOKEN = os.environ['TELEGRAM_API_TOKEN']
+MINIWEB_URL = os.environ['MINIWEB_URL']
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -21,11 +22,11 @@ user_request_times = {}
 
 # Keyboard Button Dict with Callback
 keyboard_dict = {
-    'home': [InlineKeyboardButton("🏠 Sports 🏠", web_app=WebAppInfo("https://sports-betting-dusky.vercel.app/"))],
-    'favourites': [InlineKeyboardButton("📰 Favourites 📰", web_app=WebAppInfo("https://sports-betting-dusky.vercel.app/"))],
-    'ai': [InlineKeyboardButton("📈 AI 📉", web_app=WebAppInfo("https://sports-betting-dusky.vercel.app/"))],
-    'betslip': [InlineKeyboardButton("💡 Betslip 💡", web_app=WebAppInfo("https://sports-betting-dusky.vercel.app/"))],
-    'my_bets': [InlineKeyboardButton("💼 My Bets 💼", web_app=WebAppInfo("https://sports-betting-dusky.vercel.app/"))],
+    'home': [InlineKeyboardButton("🏠 Sports 🏠", web_app=WebAppInfo(MINIWEB_URL))],
+    'favourites': [InlineKeyboardButton("📰 Favourites 📰", web_app=WebAppInfo(MINIWEB_URL))],
+    'ai': [InlineKeyboardButton("📈 AI 📉", web_app=WebAppInfo(MINIWEB_URL))],
+    'betslip': [InlineKeyboardButton("💡 Betslip 💡", web_app=WebAppInfo(MINIWEB_URL))],
+    'my_bets': [InlineKeyboardButton("💼 My Bets 💼", web_app=WebAppInfo(MINIWEB_URL))],
 }
 
 
