@@ -22,10 +22,8 @@ user_request_times = {}
 
 # Keyboard Button Dict with Callback
 keyboard_dict = {
-    'home': [InlineKeyboardButton("🏠 Sports 🏠", web_app=WebAppInfo(MINIWEB_URL))],
-    'favourites': [InlineKeyboardButton("📰 Favourites 📰", web_app=WebAppInfo(MINIWEB_URL))],
-    'ai': [InlineKeyboardButton("📈 AI 📉", web_app=WebAppInfo(MINIWEB_URL))],
-    'betslip': [InlineKeyboardButton("💡 Betslip 💡", web_app=WebAppInfo(MINIWEB_URL))],
+    'home': [InlineKeyboardButton("🏠 Home 🏠", web_app=WebAppInfo(MINIWEB_URL))],
+    'ai': [InlineKeyboardButton("✨ AI ✨", web_app=WebAppInfo(MINIWEB_URL))],
     'my_bets': [InlineKeyboardButton("💼 My Bets 💼", web_app=WebAppInfo(MINIWEB_URL))],
 }
 
@@ -33,16 +31,15 @@ keyboard_dict = {
 def generate_main_menu(user_id):
     keyboard = [
         generate_keyboard_button('home'),
-        generate_keyboard_button('favourites'),
         generate_keyboard_button('ai'),
-        generate_keyboard_button('betslip'),
         generate_keyboard_button('my_bets'),
     ]
-
     reply_markup = InlineKeyboardMarkup(keyboard)
     return (
-        '🎉 Welcome to the only one TG Gamehub Bot! 🎉\nStay updated with us. Choose an '
-        'option below:',
+        '🏆 Welcome to GameHub!🏆\n'
+        'Experience the ultimate sports betting platform, with seamless crypto integration! 🏅\n'
+        '🔗 Stay updated with the latest betting options and live events.\n'
+        '💥 Place your bets and get in on the action now!\n',
         reply_markup
     )
 
@@ -74,8 +71,11 @@ def rate_limited(user_id):
 # Main menu
 async def start(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
+    image_url = "https://ibb.co/3r9dJLQ"  # Replace with your image URL
     (message, reply_markup) = generate_main_menu(user_id)
-    await update.message.reply_text(message, reply_markup=reply_markup)
+
+    # Send the image first
+    await context.bot.send_photo(chat_id=user_id, photo=image_url, caption=message, reply_markup=reply_markup)
 
 
 # Handlers for buttons
@@ -84,12 +84,8 @@ def button_handler(update: Update, context: CallbackContext) -> None:
     query.answer()
     if query.data == 'home':
         handle_home(query, context)
-    elif query.data == 'favourites':
-        handle_favourites(query, context)
     elif query.data == 'ai':
         handle_ai(query, context)
-    elif query.data == 'betslip':
-        handle_betslip(query, context)
     elif query.data == 'my_bets':
         handle_my_bets(query, context)
 
