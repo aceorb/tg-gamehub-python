@@ -23,8 +23,8 @@ user_request_times = {}
 # Keyboard Button Dict with Callback
 keyboard_dict = {
     'home': [InlineKeyboardButton("🏠 Home 🏠", web_app=WebAppInfo(MINIWEB_URL))],
-    'ai': [InlineKeyboardButton("✨ AI ✨", web_app=WebAppInfo(MINIWEB_URL))],
-    'my_bets': [InlineKeyboardButton("💼 My Bets 💼", web_app=WebAppInfo(MINIWEB_URL))],
+    'ai': [InlineKeyboardButton("✨ AI ✨", web_app=WebAppInfo(MINIWEB_URL+'ai'))],
+    'my_bets': [InlineKeyboardButton("💼 My Bets 💼", web_app=WebAppInfo(MINIWEB_URL+'profile'))],
 }
 
 
